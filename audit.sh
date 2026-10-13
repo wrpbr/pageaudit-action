@@ -78,7 +78,7 @@ linhas='.[] | "| \(.severity) | `\(.code)` | \(.message | gsub("[|]"; "/") | gsu
   echo
   echo "$PA_URL scored **$score**/100: $erros errors and $alertas warnings."
   echo
-  if [ -n "$producao" ]; then
+  if [ "$(j 'has("comparison")')" = "true" ]; then
     echo "Compared with production ($PA_PRODUCAO, $(j '.comparison.from // "?"')/100): $(j '.comparison.score // 0') points, $novos new findings, $(j '(.comparison.fixed // []) | length') fixed."
     echo
     if [ "$novos" -gt 0 ]; then
@@ -88,10 +88,13 @@ linhas='.[] | "| \(.severity) | `\(.code)` | \(.message | gsub("[|]"; "/") | gsu
     else
       echo "Nothing got worse."
     fi
-  elif [ "$erros" -gt 0 ]; then
-    echo "| Severity | Finding | Detail |"
-    echo "|---|---|---|"
-    jq -r "[.issues[] | select(.severity == \"error\")][:10] | $linhas" "$dir/audit.json"
+  else
+    if [ -n "$producao" ]; then printf 'The comparison with production was not available.\n\n'; fi
+    if [ "$erros" -gt 0 ]; then
+      echo "| Severity | Finding | Detail |"
+      echo "|---|---|---|"
+      jq -r "[.issues[] | select(.severity == \"error\")][:10] | $linhas" "$dir/audit.json"
+    fi
   fi
   echo
   echo "Fixes and the full report: $base"
