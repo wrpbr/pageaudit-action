@@ -1,0 +1,48 @@
+name: PageAudit preview check
+description: Audit a deploy preview's technical SEO against production and show only what got worse.
+author: PageAudit
+branding:
+  icon: search
+  color: blue
+inputs:
+  url:
+    description: The page to check, usually the preview URL (`github.event.deployment_status.target_url`).
+    required: true
+  production-url:
+    description: The same page in production, to compare with. Default is the repository's website, when set.
+    required: false
+    default: ""
+  fail-on:
+    description: When to fail the step. `none` reports only; `regression` fails when the preview is worse than production; `error` fails on any error-level finding.
+    required: false
+    default: none
+  api-key:
+    description: Optional PageAudit account API key (`mmk_...`), from a secret. Audits then count on your account.
+    required: false
+    default: ""
+  pageaudit-url:
+    description: PageAudit address.
+    required: false
+    default: https://pageaudit.online
+outputs:
+  score:
+    description: Score of the checked page, 0 to 100.
+    value: ${{ steps.audit.outputs.score }}
+  regression:
+    description: "`true` when the page is worse than production."
+    value: ${{ steps.audit.outputs.regression }}
+  new-findings:
+    description: Number of findings that are only in the checked page.
+    value: ${{ steps.audit.outputs.new-findings }}
+runs:
+  using: composite
+  steps:
+    - id: audit
+      shell: bash
+      env:
+        PA_URL: ${{ inputs.url }}
+        PA_PRODUCAO: ${{ inputs.production-url || github.event.repository.homepage }}
+        PA_FAIL_ON: ${{ inputs.fail-on }}
+        PA_KEY: ${{ inputs.api-key }}
+        PA_BASE: ${{ inputs.pageaudit-url }}
+      run: bash "$GITHUB_ACTION_PATH/audit.sh"
